@@ -27,7 +27,11 @@ body {
     background: #f8f9fa;
     border: 1px solid #ccc;
     border-radius: 4px;
-    height: 300px;
+    min-height: 300px;
+    max-height: 100vh;
+    height: auto;
+    resize: vertical;
+    overflow: auto;
 }
 
 .line-numbers-container {
@@ -52,6 +56,7 @@ body {
     flex: 1;
     overflow: auto;
     position: relative;
+    min-width: 0; /* Ensures proper flex behavior when resizing */
 }
 
 textarea {
@@ -60,13 +65,14 @@ textarea {
     margin: 0;
     padding: 10px;
     border: none;
-    resize: vertical;
+    resize: none;
     font-family: monospace;
     font-size: 14px;
     line-height: 21px;
     white-space: pre;
     overflow: auto;
     background: transparent;
+    box-sizing: border-box;
 }
 
 button {
