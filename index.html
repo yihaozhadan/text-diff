@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Text Area Comparison</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <h1>Compare Two Text Areas</h1>
+        <div class="text-areas-container">
+            <div class="text-area-wrapper">
+                <div class="line-numbers-container">
+                    <div class="line-numbers" id="lineNumbers1"></div>
+                </div>
+                <div class="textarea-container">
+                    <textarea id="textArea1" placeholder="Enter text here..." spellcheck="false" wrap="off"></textarea>
+                </div>
+            </div>
+            <div class="text-area-wrapper">
+                <div class="line-numbers-container">
+                    <div class="line-numbers" id="lineNumbers2"></div>
+                </div>
+                <div class="textarea-container">
+                    <textarea id="textArea2" placeholder="Enter text here..." spellcheck="false" wrap="off"></textarea>
+                </div>
+            </div>
+        </div>
+        <button id="compareButton">Compare</button>
+        <div id="result"></div>
+    </div>
+    <script src="script.js"></script>
+</body>
+</html>
