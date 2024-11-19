@@ -1,9 +1,10 @@
 const LINE_LIMIT = 9999;
 const warningElement = document.getElementById('warning');
+const warningMessageElement = warningElement.querySelector('.warning-message');
 const toastElement = document.getElementById('toast');
 
 function showWarning(message) {
-    warningElement.textContent = message;
+    warningMessageElement.textContent = message;
     warningElement.classList.add('show');
 }
 
@@ -79,4 +80,50 @@ document.getElementById('compareButton').addEventListener('click', function() {
     } else {
         resultDiv.innerHTML = '<p>Texts are different.</p>';
     }
+});
+
+document.getElementById('resetButton').addEventListener('click', function() {
+    // Clear both text areas
+    document.getElementById('textArea1').value = '';
+    document.getElementById('textArea2').value = '';
+    
+    // Clear the result
+    document.getElementById('result').innerHTML = '';
+    
+    // Hide any warnings
+    hideWarning();
+    
+    // Update line numbers
+    updateLineNumbers('textArea1', 'lineNumbers1');
+    updateLineNumbers('textArea2', 'lineNumbers2');
+    
+    // Show a toast confirmation
+    showToast('Text areas have been cleared');
+});
+
+// Add close button functionality
+document.querySelector('.close-button').addEventListener('click', hideWarning);
+
+// Scroll to top functionality
+const scrollToTopButton = document.getElementById('scrollToTop');
+
+// Show button when page is scrolled
+window.addEventListener('scroll', () => {
+    if (window.pageYOffset > 100) {
+        scrollToTopButton.classList.add('show');
+    } else {
+        scrollToTopButton.classList.remove('show');
+    }
+});
+
+// Smooth scroll to top when button is clicked
+scrollToTopButton.addEventListener('click', () => {
+    const targetPosition = 0;
+    const startPosition = window.pageYOffset;
+    const distance = Math.min(startPosition, window.innerHeight);
+    
+    window.scrollTo({
+        top: targetPosition,
+        behavior: 'smooth'
+    });
 });
