@@ -35,21 +35,22 @@ body {
 }
 
 .line-numbers-container {
-    width: 40px;
-    min-width: 40px;
+    width: 45px;
+    min-width: 45px;
     background: #f0f0f0;
     border-right: 1px solid #ccc;
     overflow: hidden;
 }
 
 .line-numbers {
-    font-family: monospace;
+    font-family: 'Courier New', monospace;
     color: #666;
     text-align: right;
-    padding: 10px 5px;
+    padding: 10px 4px;
     font-size: 14px;
     line-height: 21px;
     user-select: none;
+    white-space: pre;
 }
 
 .textarea-container {
@@ -94,6 +95,41 @@ button:hover {
     padding: 10px;
     border: 1px solid #ccc;
     border-radius: 4px;
+}
+
+.warning {
+    display: none;
+    background-color: #fff3cd;
+    color: #856404;
+    padding: 10px;
+    margin-bottom: 15px;
+    border: 1px solid #ffeeba;
+    border-radius: 4px;
+    text-align: center;
+}
+
+.warning.show {
+    display: block;
+}
+
+.toast {
+    visibility: hidden;
+    position: fixed;
+    top: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    background-color: #333;
+    color: white;
+    padding: 16px;
+    border-radius: 4px;
+    z-index: 1000;
+    opacity: 0;
+    transition: opacity 0.3s, visibility 0.3s;
+}
+
+.toast.show {
+    visibility: visible;
+    opacity: 1;
 }
 
 /* Tablet and Desktop Layout */
