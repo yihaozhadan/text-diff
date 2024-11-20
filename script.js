@@ -70,86 +70,132 @@ function updateLineNumbers(textAreaId, lineNumbersId) {
     updateLineNumbers(textAreaId, lineNumbersId);
 });
 
+/**
+ * Find differences between two texts by comparing them line by line.
+ * The algorithm prioritizes:
+ * 1. Deletions at the start of the sequence
+ * 2. Additions between matched lines
+ * 3. Remaining deletions at the end
+ * @param {string} text1 - The original text (left side)
+ * @param {string} text2 - The modified text (right side)
+ * @returns {Array} Array of difference objects describing the changes
+ */
 function findLineDifferences(text1, text2) {
     const lines1 = text1.split('\n');
     const lines2 = text2.split('\n');
-    const differences = [];
-    let diffCount = 0;
 
-    // Helper function to find the next different line
-    function findNextDifference(startIdx1, startIdx2) {
-        let i = startIdx1, j = startIdx2;
-        let consecutiveDiffs = 0;
-        let diffStart1 = i, diffStart2 = j;
+    /**
+     * Find matching lines between the two texts in order.
+     * This helps identify which lines remain unchanged and their positions.
+     * @returns {Object} Object containing:
+     *   - matches: Array of [line1Index, line2Index] pairs
+     *   - used1: Set of indices from text1 that have matches
+     *   - used2: Set of indices from text2 that have matches
+     */
+    function findMatchingLines() {
+        const matches = [];  // Stores pairs of matching line indices
+        const used1 = new Set();  // Tracks which lines from text1 are matched
+        const used2 = new Set();  // Tracks which lines from text2 are matched
 
-        while (i < lines1.length || j < lines2.length) {
-            if (i >= lines1.length) {
-                // Remaining lines in text2 are additions
-                consecutiveDiffs = lines2.length - j;
-                differences.push({
-                    type: 'add',
-                    leftLine: i,
-                    rightLines: [j + 1, j + consecutiveDiffs],
-                    count: consecutiveDiffs
-                });
-                break;
-            } else if (j >= lines2.length) {
-                // Remaining lines in text1 are deletions
-                consecutiveDiffs = lines1.length - i;
-                differences.push({
-                    type: 'delete',
-                    leftLines: [i + 1, i + consecutiveDiffs],
-                    rightLine: j,
-                    count: consecutiveDiffs
-                });
-                break;
-            } else if (lines1[i] !== lines2[j]) {
-                // Found a difference
-                if (consecutiveDiffs === 0) {
-                    diffStart1 = i;
-                    diffStart2 = j;
-                }
-                consecutiveDiffs++;
-                
-                // Check if next lines match
-                const nextMatchFound = 
-                    (i + 1 < lines1.length && j + 1 < lines2.length && lines1[i + 1] === lines2[j + 1]) ||
-                    (i + 1 === lines1.length && j + 1 === lines2.length);
-
-                if (nextMatchFound) {
-                    // Determine if it's an add, delete, or modify
-                    if (lines1[i] === '') {
-                        differences.push({
-                            type: 'add',
-                            leftLine: i + 1,
-                            rightLines: [diffStart2 + 1, j + 1],
-                            count: consecutiveDiffs
-                        });
-                    } else if (lines2[j] === '') {
-                        differences.push({
-                            type: 'delete',
-                            leftLines: [diffStart1 + 1, i + 1],
-                            rightLine: j + 1,
-                            count: consecutiveDiffs
-                        });
-                    } else {
-                        differences.push({
-                            type: 'modify',
-                            leftLines: [diffStart1 + 1, i + 1],
-                            rightLines: [diffStart2 + 1, j + 1],
-                            count: consecutiveDiffs
-                        });
-                    }
-                    consecutiveDiffs = 0;
-                }
+        // Find exact matches while preserving order
+        let j = 0;
+        for (let i = 0; i < lines1.length; i++) {
+            // Skip already matched lines in text2
+            while (j < lines2.length && used2.has(j)) j++;
+            
+            // If we find a match, record it
+            if (j < lines2.length && lines1[i] === lines2[j]) {
+                matches.push([i, j]);
+                used1.add(i);
+                used2.add(j);
+                j++;
             }
-            i++;
-            j++;
         }
+
+        return { matches, used1, used2 };
     }
 
-    findNextDifference(0, 0);
-    return differences;
+    /**
+     * Generate difference objects based on matched and unmatched lines.
+     * Processes changes in this order:
+     * 1. Deletions at the start
+     * 2. Additions between matches
+     * 3. Remaining additions
+     * 4. Remaining deletions
+     * @param {Array} matches - Array of matching line index pairs
+     * @param {Set} used1 - Set of matched indices from text1
+     * @param {Set} used2 - Set of matched indices from text2
+     * @returns {Array} Array of difference objects
+     */
+    function generateDifferences(matches, used1, used2) {
+        const differences = [];
+        let lastMatchedLine1 = -1;  // Last matched line in text1
+        let lastMatchedLine2 = -1;  // Last matched line in text2
+
+        // First, handle deletions at the start of the sequence
+        // These are lines in text1 that don't have matches
+        for (let i = 0; i < lines1.length; i++) {
+            if (!used1.has(i)) {
+                differences.push({
+                    type: 'delete',
+                    leftLines: [i + 1, i + 1],  // Convert to 1-based line numbers
+                    rightLine: 1,
+                    count: 1
+                });
+            }
+        }
+
+        // Process matches and find additions between them
+        for (let i = 0; i < matches.length; i++) {
+            const [line1, line2] = matches[i];
+            
+            // Look for unmatched lines in text2 before this match
+            // These are additions relative to the current match
+            for (let j = lastMatchedLine2 + 1; j < line2; j++) {
+                if (!used2.has(j)) {
+                    differences.push({
+                        type: 'add',
+                        leftLine: line1,
+                        rightLines: [j + 1, j + 1],  // Convert to 1-based line numbers
+                        count: 1
+                    });
+                }
+            }
+
+            lastMatchedLine1 = line1;
+            lastMatchedLine2 = line2;
+        }
+
+        // Handle any remaining additions after the last match
+        for (let j = lastMatchedLine2 + 1; j < lines2.length; j++) {
+            if (!used2.has(j)) {
+                differences.push({
+                    type: 'add',
+                    leftLine: lines1.length,
+                    rightLines: [j + 1, j + 1],
+                    count: 1
+                });
+            }
+        }
+
+        // Finally, handle any remaining deletions at the end
+        for (let i = lastMatchedLine1 + 1; i < lines1.length; i++) {
+            if (!used1.has(i)) {
+                differences.push({
+                    type: 'delete',
+                    leftLines: [i + 1, i + 1],
+                    rightLine: lines2.length + 1,
+                    count: 1
+                });
+            }
+        }
+
+        return differences;
+    }
+
+    // Find matching lines and generate differences
+    const { matches, used1, used2 } = findMatchingLines();
+    return generateDifferences(matches, used1, used2);
 }
 
 function formatDifference(diff, index) {
@@ -194,50 +240,91 @@ function showDiffContent(diff, text1, text2) {
     leftDiff.innerHTML = '';
     rightDiff.innerHTML = '';
 
-    // Get the context lines (3 lines before and after)
     const CONTEXT_LINES = 3;
     const lines1 = text1.split('\n');
     const lines2 = text2.split('\n');
 
-    function addLine(element, line, type) {
+    function addLine(element, content, type, lineNumber) {
         const lineDiv = document.createElement('div');
         lineDiv.className = `diff-line ${type}`;
-        lineDiv.textContent = line;
+        
+        // Add line number
+        const lineNumberSpan = document.createElement('span');
+        lineNumberSpan.className = 'line-number';
+        lineNumberSpan.textContent = lineNumber;
+        lineDiv.appendChild(lineNumberSpan);
+
+        // Add content with prefix
+        const contentSpan = document.createElement('span');
+        contentSpan.className = 'line-content';
+        let prefix = ' ';
+        if (type === 'added') prefix = '+';
+        if (type === 'removed') prefix = '-';
+        contentSpan.textContent = `${prefix} ${content}`;
+        lineDiv.appendChild(contentSpan);
+
         element.appendChild(lineDiv);
+    }
+
+    function addContextLines(startIdx, endIdx, side, element, lines) {
+        for (let i = startIdx; i <= endIdx; i++) {
+            if (i >= 0 && i < lines.length) {
+                addLine(element, lines[i], 'context', i + 1);
+            }
+        }
     }
 
     switch (diff.type) {
         case 'add':
             // Show context in left view
-            for (let i = Math.max(0, diff.leftLine - CONTEXT_LINES); i <= Math.min(lines1.length - 1, diff.leftLine + CONTEXT_LINES); i++) {
-                addLine(leftDiff, lines1[i], 'context');
-            }
+            const leftContextStart = Math.max(0, diff.leftLine - CONTEXT_LINES);
+            const leftContextEnd = Math.min(lines1.length - 1, diff.leftLine + CONTEXT_LINES);
+            addContextLines(leftContextStart, leftContextEnd, 'left', leftDiff, lines1);
+
             // Show context and added lines in right view
+            addContextLines(Math.max(0, diff.rightLines[0] - CONTEXT_LINES - 1), diff.rightLines[0] - 2, 'right', rightDiff, lines2);
+            
+            // Add the new lines
             for (let i = diff.rightLines[0] - 1; i < diff.rightLines[1]; i++) {
-                addLine(rightDiff, lines2[i], 'added');
+                addLine(rightDiff, lines2[i], 'added', i + 1);
             }
+            
+            addContextLines(diff.rightLines[1], Math.min(lines2.length - 1, diff.rightLines[1] + CONTEXT_LINES - 1), 'right', rightDiff, lines2);
             break;
 
         case 'delete':
-            // Show deleted lines in left view
+            // Show context and deleted lines in left view
+            addContextLines(Math.max(0, diff.leftLines[0] - CONTEXT_LINES - 1), diff.leftLines[0] - 2, 'left', leftDiff, lines1);
+            
+            // Show the deleted lines
             for (let i = diff.leftLines[0] - 1; i < diff.leftLines[1]; i++) {
-                addLine(leftDiff, lines1[i], 'removed');
+                addLine(leftDiff, lines1[i], 'removed', i + 1);
             }
+            
+            addContextLines(diff.leftLines[1], Math.min(lines1.length - 1, diff.leftLines[1] + CONTEXT_LINES - 1), 'left', leftDiff, lines1);
+
             // Show context in right view
-            for (let i = Math.max(0, diff.rightLine - CONTEXT_LINES); i <= Math.min(lines2.length - 1, diff.rightLine + CONTEXT_LINES); i++) {
-                addLine(rightDiff, lines2[i], 'context');
-            }
+            const rightContextStart = Math.max(0, diff.rightLine - CONTEXT_LINES);
+            const rightContextEnd = Math.min(lines2.length - 1, diff.rightLine + CONTEXT_LINES);
+            addContextLines(rightContextStart, rightContextEnd, 'right', rightDiff, lines2);
             break;
 
         case 'modify':
-            // Show old lines in left view
+            // Show context before changes
+            addContextLines(Math.max(0, diff.leftLines[0] - CONTEXT_LINES - 1), diff.leftLines[0] - 2, 'left', leftDiff, lines1);
+            addContextLines(Math.max(0, diff.rightLines[0] - CONTEXT_LINES - 1), diff.rightLines[0] - 2, 'right', rightDiff, lines2);
+            
+            // Show modified lines
             for (let i = diff.leftLines[0] - 1; i < diff.leftLines[1]; i++) {
-                addLine(leftDiff, lines1[i], 'removed');
+                addLine(leftDiff, lines1[i], 'removed', i + 1);
             }
-            // Show new lines in right view
             for (let i = diff.rightLines[0] - 1; i < diff.rightLines[1]; i++) {
-                addLine(rightDiff, lines2[i], 'added');
+                addLine(rightDiff, lines2[i], 'added', i + 1);
             }
+            
+            // Show context after changes
+            addContextLines(diff.leftLines[1], Math.min(lines1.length - 1, diff.leftLines[1] + CONTEXT_LINES - 1), 'left', leftDiff, lines1);
+            addContextLines(diff.rightLines[1], Math.min(lines2.length - 1, diff.rightLines[1] + CONTEXT_LINES - 1), 'right', rightDiff, lines2);
             break;
     }
 
