@@ -41,7 +41,22 @@
             <button id="compareButton">Compare</button>
             <button id="resetButton">Reset</button>
         </div>
-        <div id="result"></div>
+        <div id="result">
+            <select id="diffSelect" class="diff-select" style="display: none;">
+                <option value="">Select a difference...</option>
+            </select>
+            <div id="diffDetail" class="diff-detail"></div>
+            <div class="diff-view-container">
+                <div class="diff-view">
+                    <div class="diff-header">Left Text Difference</div>
+                    <pre id="leftDiff" class="diff-content"></pre>
+                </div>
+                <div class="diff-view">
+                    <div class="diff-header">Right Text Difference</div>
+                    <pre id="rightDiff" class="diff-content"></pre>
+                </div>
+            </div>
+        </div>
     </div>
     <script src="script.js"></script>
 </body>
